@@ -23,7 +23,7 @@ class WPBE_BP {
 	 * @return WPBE_BP object
 	 * @static
 	 */
-	public static function &init() {
+	public static function init() {
 		static $instance = false;
 
 		if ( !$instance ) {
@@ -39,18 +39,18 @@ class WPBE_BP {
 	function __construct() {
 		// if WP Better Emails does not exist, throw a notice with activation or installation link for WPBE
 		if ( ! class_exists( 'WP_Better_Emails' ) ) {
-			add_action( 'admin_notices',                          array( &$this, 'get_wpbe' ) );
+			add_action( 'admin_notices',                          array( $this, 'get_wpbe' ) );
 			return;
 		}
 
 		// add notification settings to BP
-		add_action( 'bp_members_notification_settings_before_submit', array( &$this, 'screen' ) );
+		add_action( 'bp_members_notification_settings_before_submit', array( $this, 'screen' ) );
 
 		// filter WP email to get the recipient
-		add_filter( 'wp_mail',                                        array( &$this, 'wp_mail_filter' ) );
+		add_filter( 'wp_mail',                                        array( $this, 'wp_mail_filter' ) );
 
 		// hijack WP email content type from WPBE
-		add_filter( 'wp_mail_content_type',                           array( &$this, 'set_wp_mail_content_type' ), 99 );
+		add_filter( 'wp_mail_content_type',                           array( $this, 'set_wp_mail_content_type' ), 99 );
 	}
 
 	/**
