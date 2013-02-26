@@ -120,9 +120,9 @@ class WPBE_BP {
 		<div id="email-type-notification">
 
 			<h3><?php _e( 'Email Type', 'wpbe-bp' ); ?></h3>
-		
+
 			<p><?php _e( 'Choose between HTML or plain-text when receiving email notifications.', 'wpbe-bp' ); ?></p>
-	
+
 			<table class="notification-settings">
 				<thead>
 					<tr>
@@ -132,7 +132,7 @@ class WPBE_BP {
 						<th class="no"><?php _e( 'No', 'buddypress' )?></th>
 					</tr>
 				</thead>
-		
+
 				<tbody>
 					<tr>
 						<td>&nbsp;</td>
@@ -193,9 +193,9 @@ if ( ! class_exists( 'Theme_Plugin_Dependency' ) ) {
 		function __construct( $slug, $uri ) {
 			$this->slug = $slug;
 			$this->uri = $uri;
-			if ( empty( $this->plugins ) ) 
+			if ( empty( $this->plugins ) )
 				$this->plugins = get_plugins();
-			if ( empty( $this->uris ) ) 
+			if ( empty( $this->uris ) )
 				$this->uris = wp_list_pluck($this->plugins, 'PluginURI');
 		}
 
@@ -224,7 +224,7 @@ if ( ! class_exists( 'Theme_Plugin_Dependency' ) ) {
 
 			$info = plugins_api('plugin_information', array('slug' => $this->slug ));
 
-			if ( is_wp_error( $info ) ) 
+			if ( is_wp_error( $info ) )
 				return false; // plugin not available from wordpress.org
 
 			return wp_nonce_url(self_admin_url('update.php?action=install-plugin&plugin=' . $this->slug), 'install-plugin_' . $this->slug);
