@@ -51,6 +51,15 @@ class WPBE_BP {
 
 		// hijack WP email content type from WPBE
 		add_filter( 'wp_mail_content_type',                           array( $this, 'set_wp_mail_content_type' ), 99 );
+
+		// (hack!) we need to save the original HTML content from activity items
+		add_action( 'bp_activity_after_save',                         array( $this, 'save_activity_content' ),    9 );
+		add_action( 'bp_activity_after_save',                         array( $this, 'remove_activity_content' ),  999 );
+
+		// Use the HTML content for the following emails
+		// @todo add support BP Group Email Subscription
+		add_filter( 'bp_activity_at_message_notification_message',    array( $this, 'use_html_for_at_message' ),       99, 5 );
+		add_filter( 'bp_activity_new_comment_notification_message',   array( $this, 'use_html_for_activity_replies' ), 99, 5 );
 	}
 
 	/**
@@ -107,6 +116,141 @@ class WPBE_BP {
 		}
 
 		return $content_type;
+	}
+
+	/**
+	 * Temporarily save the full activity content.
+	 *
+	 * The reason why this is done is currently, activity notification emails
+	 * strip all HTML before sending.
+	 *
+	 * However, we don't want HTML stripped from emails.  So we have to resort to
+	 * this method until BP fixes this in core.
+	 *
+	 * @param obj $activity The BP activity object
+	 */
+	function save_activity_content( $activity ) {
+		global $bp;
+
+		$bp->activity->temp = new stdClass;
+		$bp->activity->temp->content = $activity->content;
+
+	}
+
+	/**
+	 * Remove our locally-cached activity object.
+	 *
+	 * Clear up any remnants from our hack.
+	 *
+	 * @see WPBE_BP::save_activity_content()
+	 *
+	 * @param obj $activity The BP activity object
+	 */
+	function remove_activity_content( $activity ) {
+		global $bp;
+
+		// remove temporary saved activity content
+		if ( ! empty( $bp->activity->temp ) ) {
+			unset( $bp->activity->temp );
+		}
+
+	}
+
+	/**
+	 * Modify the @mention email to use HTML instead of plain-text.
+	 *
+	 * Uses our locally-cached activity content, which contains HTML from
+	 * {@link WPBE_BP::save_activity_content()}.
+	 *
+	 * @param str $retval The original email message
+	 * @param stt $poster_name The person mentioning the email recipient
+	 * @param str $content The original email content
+	 * @param str $message_link The activity permalink
+	 * @param str $settings_link The settings link for the email recipient
+	 *
+	 * @return str The modified email content containing HTML if available.
+	 */
+	function use_html_for_at_message( $retval, $poster_name, $content, $message_link, $settings_link ) {
+		global $bp;
+
+		// sanity check!
+		if ( empty( $bp->activity->temp->content ) ) {
+			return $retval;
+
+		// grab our activity content from our locally-cached variable
+		} else {
+			$content = stripslashes( $bp->activity->temp->content );
+		}
+
+		// the following is basically a copy of bp_activity_at_message_notification()
+
+		if ( bp_is_active( 'groups' ) && bp_is_group() ) {
+			$message = sprintf( __(
+'%1$s mentioned you in the group "%2$s":
+
+"%3$s"
+
+To view and respond to the message, log in and visit: %4$s
+
+---------------------
+', 'buddypress' ), $poster_name, bp_get_current_group_name(), $content, $message_link );
+		} else {
+			$message = sprintf( __(
+'%1$s mentioned you in an update:
+
+"%2$s"
+
+To view and respond to the message, log in and visit: %3$s
+
+---------------------
+', 'buddypress' ), $poster_name, $content, $message_link );
+		}
+
+		$message .= sprintf( __( 'To disable these notifications please log in and go to: %s', 'buddypress' ), $settings_link );
+
+		return $message;
+	}
+
+	/**
+	 * Modify the activity reply email to use HTML instead of plain-text.
+	 *
+	 * Uses our locally-cached activity content, which contains HTML in
+	 * {@link WPBE_BP::save_activity_content()}.
+	 *
+	 * @param str $retval The original email message
+	 * @param stt $poster_name The person mentioning the email recipient
+	 * @param str $content The original email content
+	 * @param str $message_link The activity permalink
+	 * @param str $settings_link The settings link for the email recipient
+	 *
+	 * @return str The modified email content containing HTML if available.
+	 */
+	function use_html_for_activity_replies( $retval, $poster_name, $content, $thread_link, $settings_link ) {
+		global $bp;
+
+		// sanity check!
+		if ( empty( $bp->activity->temp->content ) ) {
+			return $retval;
+
+		// grab our activity content from our locally-cached variable
+		} else {
+			$content = stripslashes( $bp->activity->temp->content );
+		}
+
+		// the following is basically a copy of bp_activity_new_comment_notification()
+
+		$message = sprintf( __( '%1$s replied to one of your updates:
+
+"%2$s"
+
+To view your original update and all comments, log in and visit: %3$s
+
+---------------------
+', 'buddypress' ), $poster_name, $content, $thread_link );
+
+		$message .= sprintf( __( 'To disable these notifications please log in and go to: %s', 'buddypress' ), $settings_link );
+
+		return $message;
 	}
 
 	/**
