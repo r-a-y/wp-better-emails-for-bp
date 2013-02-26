@@ -60,6 +60,15 @@ class WPBE_BP {
 		// @todo add support BP Group Email Subscription
 		add_filter( 'bp_activity_at_message_notification_message',    array( $this, 'use_html_for_at_message' ),       99, 5 );
 		add_filter( 'bp_activity_new_comment_notification_message',   array( $this, 'use_html_for_activity_replies' ), 99, 5 );
+
+		// WPBE - convert HTML to plaintext body
+		add_filter( 'wpbe_plaintext_body',                            array( $this, 'convert_html_to_plaintext' ) );
+
+		// Filters we run to convert HTML to plain-text
+		add_filter( 'wpbe_html_to_plaintext',                         'stripslashes',               5 );
+		add_filter( 'wpbe_html_to_plaintext',                         'wp_kses_normalize_entities', 5 );
+		add_filter( 'wpbe_html_to_plaintext',                         'wpautop' );
+		add_filter( 'wpbe_html_to_plaintext',                         'wp_specialchars_decode',     99 );
 	}
 
 	/**
@@ -251,6 +260,37 @@ To view your original update and all comments, log in and visit: %3$s
 		$message .= sprintf( __( 'To disable these notifications please log in and go to: %s', 'buddypress' ), $settings_link );
 
 		return $message;
+	}
+
+	/**
+	 * In WP Better Emails, we still need to generate a plain-text body.
+	 *
+	 * Since we're now using HTML for emails, we should convert the HTML over to
+	 * plain-text.
+	 *
+	 * Uses the html2text functions from the {@link http://openiaml.org/ IAML Modelling Platform}
+	 * by {@link mailto:j.m.wright@massey.ac.nz Jevon Wright}.
+	 *
+	 * Licensed under the Eclipse Public License v1.0:
+	 * {@link http://www.eclipse.org/legal/epl-v10.html}
+	 *
+	 * The functions have been modified by me to better support other elements
+	 * like <img> and <li>.
+	 *
+	 * @param str $content The original email content
+	 *
+	 * @return str The modified email content converted to plain-text.
+	 */
+	function convert_html_to_plaintext( $content ) {
+		// @todo perhaps load this library at load time instead of during sendouts?
+		if ( ! function_exists( 'convert_html_to_text' ) ) {
+			require( dirname( __FILE__ ) . '/functions.html2text.php' );
+		}
+
+		add_filter( 'wpbe_html_to_plaintext', 'convert_html_to_text' );
+
+		// 'wpbe_html_to_plaintext' is a custom filter by this plugin
+		return apply_filters( 'wpbe_html_to_plaintext', $content );
 	}
 
 	/**
