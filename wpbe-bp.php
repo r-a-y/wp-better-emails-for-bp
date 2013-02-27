@@ -52,6 +52,11 @@ class WPBE_BP {
 		// hijack WP email content type from WPBE
 		add_filter( 'wp_mail_content_type',                           array( $this, 'set_wp_mail_content_type' ), 999 );
 
+		// if we're using an older version of WP Better Emails, we can stop the rest
+		// of this plugin!
+		if ( ! $this->is_newer_version() )
+			return;
+
 		// (hack!) we need to save the original HTML content from activity items
 		add_action( 'bp_activity_after_save',                         array( $this, 'save_activity_content' ),    9 );
 		add_action( 'bp_activity_after_save',                         array( $this, 'remove_activity_content' ),  999 );
@@ -123,8 +128,11 @@ class WPBE_BP {
 			// remove WP Better Emails' default HTML hook
 			remove_action( 'phpmailer_init', array( $wp_better_emails, 'send_html' ) );
 
-			// add our own custom plain-text hook
-			add_action( 'phpmailer_init',    array( $this, 'send_plaintext_only' ) );
+			// add our own custom plain-text hook only if we're using a newer version
+			// of WP Better Emails
+			if ( $this->is_newer_version() ) {
+				add_action( 'phpmailer_init', array( $this, 'send_plaintext_only' ) );
+			}
 
 			// make sure we return the content type as plain-text
 			return 'text/plain';
@@ -374,6 +382,18 @@ To view your original update and all comments, log in and visit: %3$s
 			<?php endif; ?>
 		</div>
 	<?php
+	}
+
+	/**
+	 * Determine if we're using the newer version of WP Better Emails.
+	 */
+	function is_newer_version() {
+		global $wp_better_emails;
+
+		if ( is_callable( array( $wp_better_emails, 'plaintext_template_editor' ) ) )
+			return true;
+
+		return false;
 	}
 }
 
