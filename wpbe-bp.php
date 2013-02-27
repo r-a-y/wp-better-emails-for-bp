@@ -50,14 +50,14 @@ class WPBE_BP {
 		add_filter( 'wp_mail',                                        array( $this, 'wp_mail_filter' ) );
 
 		// hijack WP email content type from WPBE
-		add_filter( 'wp_mail_content_type',                           array( $this, 'set_wp_mail_content_type' ), 99 );
+		add_filter( 'wp_mail_content_type',                           array( $this, 'set_wp_mail_content_type' ), 999 );
 
 		// (hack!) we need to save the original HTML content from activity items
 		add_action( 'bp_activity_after_save',                         array( $this, 'save_activity_content' ),    9 );
 		add_action( 'bp_activity_after_save',                         array( $this, 'remove_activity_content' ),  999 );
 
 		// Use the HTML content for the following emails
-		// @todo add support BP Group Email Subscription
+		// @todo add support for BP Group Email Subscription
 		add_filter( 'bp_activity_at_message_notification_message',    array( $this, 'use_html_for_at_message' ),       99, 5 );
 		add_filter( 'bp_activity_new_comment_notification_message',   array( $this, 'use_html_for_activity_replies' ), 99, 5 );
 
@@ -110,17 +110,23 @@ class WPBE_BP {
 	}
 
 	/**
-	 * See if the user in question wants HTML email.
+	 * See if the user in question wants HTML or plain-text email.
 	 */
 	function set_wp_mail_content_type( $content_type ) {
 		$is_email_html = bp_get_user_meta( $this->user_id, 'notification_html_email', true );
 
 		// if user wants plain text, let's set the email to send in plain text and
-		// disable WP Better Emails' custom PHPMailer sendout
+		// disable WP Better Emails' custom PHPMailer sendout and add our own hook
 		if ( $is_email_html == 'no' ) {
 			global $wp_better_emails;
 
+			// remove WP Better Emails' default HTML hook
 			remove_action( 'phpmailer_init', array( $wp_better_emails, 'send_html' ) );
+
+			// add our own custom plain-text hook
+			add_action( 'phpmailer_init',    array( $this, 'send_plaintext_only' ) );
+
+			// make sure we return the content type as plain-text
 			return 'text/plain';
 		}
 
@@ -291,6 +297,24 @@ To view your original update and all comments, log in and visit: %3$s
 
 		// 'wpbe_html_to_plaintext' is a custom filter by this plugin
 		return apply_filters( 'wpbe_html_to_plaintext', $content );
+	}
+
+	/**
+	 * If a user in BuddyPress has selected to receive emails in plain-text only,
+	 * set up PHPMailer to use plain-text.
+	 *
+	 * @see WPBE_BP::set_wp_mail_content_type()
+	 *
+	 * @param obj $phpmailer The PHPMailer object
+	 */
+	function send_plaintext_only( $phpmailer ) {
+		global $wp_better_emails;
+
+		// Add plain-text template to message
+		$phpmailer->Body = $wp_better_emails->set_email_template( $phpmailer->Body, 'plaintext_template' );
+
+		// The 'wpbe_plaintext_body' filter does the actual conversion to plain-text
+		$phpmailer->Body = apply_filters( 'wpbe_plaintext_body', $wp_better_emails->template_vars_replacement( $phpmailer->Body ) );
 	}
 
 	/**
