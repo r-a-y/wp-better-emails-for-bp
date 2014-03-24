@@ -323,6 +323,12 @@ To view your original update and all comments, log in and visit: %3$s
 
 		// The 'wpbe_plaintext_body' filter does the actual conversion to plain-text
 		$phpmailer->Body = apply_filters( 'wpbe_plaintext_body', $wp_better_emails->template_vars_replacement( $phpmailer->Body ) );
+
+		// wipe out the alt body
+		$phpmailer->AltBody = '';
+
+		// set HTML to false to be extra-safe!
+		$phpmailer->IsHTML( false );
 	}
 
 	/**
