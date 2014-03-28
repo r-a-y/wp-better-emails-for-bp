@@ -57,9 +57,14 @@ class WPBE_BP {
 		if ( ! $this->is_newer_version() )
 			return;
 
-		// (hack!) we need to save the original HTML content from activity items
+		// (hack!) we need to stash the original activity item
+		// normal activity items
 		add_action( 'bp_activity_after_save',                         array( $this, 'save_activity_content' ),    9 );
 		add_action( 'bp_activity_after_save',                         array( $this, 'remove_activity_content' ),  999 );
+
+		// activity comment notifications are sent at bp_activity_comment_posted
+		add_action( 'bp_activity_comment_posted', array( $this, 'save_activity_comment' ),    9 );
+		add_action( 'bp_activity_comment_posted', array( $this, 'remove_activity_comment' ),  999 );
 
 		// Use the HTML content for the following emails
 		// @todo add support for BP Group Email Subscription
@@ -152,7 +157,7 @@ class WPBE_BP {
 	 *
 	 * @param obj $activity The BP activity object
 	 */
-	function save_activity_content( $activity ) {
+	public static function save_activity_content( $activity ) {
 		global $bp;
 
 		$bp->activity->temp = $activity;
@@ -167,7 +172,7 @@ class WPBE_BP {
 	 *
 	 * @param obj $activity The BP activity object
 	 */
-	function remove_activity_content( $activity ) {
+	public static function remove_activity_content( $activity ) {
 		global $bp;
 
 		// remove temporary saved activity content
@@ -175,6 +180,30 @@ class WPBE_BP {
 			unset( $bp->activity->temp );
 		}
 
+	}
+
+	/**
+	 * Temporarily save the full activity content after activity comments.
+	 *
+	 * Wrapper for self::save_activity_content().
+	 *
+	 * @param obj $comment_id The ID of the activity comment.
+	 */
+	static function save_activity_comment( $comment_id ) {
+		$comment = new BP_Activity_Activity( $comment_id );
+		self::save_activity_content( $comment );
+	}
+
+	/**
+	 * Remove temporarily stashed activity content after activity comments.
+	 *
+	 * Wrapper for self::remove_activity_content().
+	 *
+	 * @param obj $comment_id The ID of the activity comment.
+	 */
+	static function remove_activity_comment( $comment_id ) {
+		$comment = new BP_Activity_Activity( $comment_id );
+		self::remove_activity_content( $comment );
 	}
 
 	/**
