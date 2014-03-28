@@ -100,6 +100,9 @@ class WPBE_BP {
 		// Friends - accepted
 		add_filter( 'friends_notification_accepted_request_message', array( $this, 'use_html_for_friend_accept' ), 99, 4 );
 
+		// Groups - group updated
+		add_filter( 'groups_notification_group_updated_message', array( $this, 'use_html_for_group_updated' ), 99, 4 );
+
 		// Use the HTML content for the following emails
 		// @todo add support for BP Group Email Subscription
 		// WPBE - convert HTML to plaintext body
@@ -420,6 +423,32 @@ class WPBE_BP {
 		return $content;
 	}
 
+	/** Groups component *************************************************/
+
+	/**
+	 * Build HTML content for group updated emails.
+	 *
+	 * @param string $retval Originally formatted message.
+	 * @param object $group Group object.
+	 * @param string $group_link URL of the group.
+	 * @param string $settings_link URL of the user's notification settings page.
+	 * @return string
+	 */
+	function use_html_for_group_updated( $retval, $group, $group_link, $settings_link ) {
+		$group_url = bp_get_group_permalink( $group );
+		$group_link = '<a href="' . $group_url . '</a>' . $group->name . '</a>';
+
+		$content = sprintf( __(
+'Group details for the group %1$s were updated.
+
+%2$s &middot; %3$s', 'buddypress' ),
+			$group_link,
+			sprintf( '<a href="%s">%s</a>', $group_url, __( 'View', 'buddypress' ) ),
+			sprintf( '<a href="%s">%s</a>', $settings_link, __( 'Notifications Settings', 'buddypress' ) )
+		);
+
+		return $content;
+	}
 	/**
 	 * In WP Better Emails, we still need to generate a plain-text body.
 	 *
