@@ -155,9 +155,7 @@ class WPBE_BP {
 	function save_activity_content( $activity ) {
 		global $bp;
 
-		$bp->activity->temp = new stdClass;
-		$bp->activity->temp->content = $activity->content;
-
+		$bp->activity->temp = $activity;
 	}
 
 	/**
@@ -202,34 +200,32 @@ class WPBE_BP {
 
 		// grab our activity content from our locally-cached variable
 		} else {
-			$content = stripslashes( $bp->activity->temp->content );
+			$activity = $bp->activity->temp;
 		}
 
-		// the following is basically a copy of bp_activity_at_message_notification()
+		$poster_link = bp_core_get_userlink( $activity->user_id );
+		$content = stripslashes( $activity->content );
+		$reply_link = sprintf( '<a href="%s">%s</a>', $message_link, __( 'View/Reply', 'buddypress' ) );
 
 		if ( bp_is_active( 'groups' ) && bp_is_group() ) {
+			$group = groups_get_current_group();
+			$group_link = '<a href="' . bp_get_group_permalink( $group ) . '">' . $group->name . '</a>';
 			$message = sprintf( __(
-'%1$s mentioned you in the group "%2$s":
+'%1$s mentioned you in the group %2$s:
 
-"%3$s"
+<blockquote>%3$s</blockquote>
 
-To view and respond to the message, log in and visit: %4$s
-
----------------------
-', 'buddypress' ), $poster_name, bp_get_current_group_name(), $content, $message_link );
+%4$s ', 'buddypress' ), $poster_link, $group_link, $content, $reply_link );
 		} else {
 			$message = sprintf( __(
 '%1$s mentioned you in an update:
 
-"%2$s"
+<blockquote>%2$s</blockquote>
 
-To view and respond to the message, log in and visit: %3$s
-
----------------------
-', 'buddypress' ), $poster_name, $content, $message_link );
+%3$s', 'buddypress' ), $poster_link, $content, $reply_link );
 		}
 
-		$message .= sprintf( __( 'To disable these notifications please log in and go to: %s', 'buddypress' ), $settings_link );
+		$message .= sprintf( ' &middot; <a href="%s">%s</a>', $settings_link, __( 'Notification Settings', 'buddypress' ) );
 
 		return $message;
 	}
@@ -257,21 +253,20 @@ To view and respond to the message, log in and visit: %3$s
 
 		// grab our activity content from our locally-cached variable
 		} else {
-			$content = stripslashes( $bp->activity->temp->content );
+			$activity = $bp->activity->temp;
 		}
 
 		// the following is basically a copy of bp_activity_new_comment_notification()
+		$sender_link = bp_core_get_userlink( $activity->user_id );
+		$reply_link = sprintf( '<a href="%s">%s</a>', $thread_link, __( 'View/Reply', 'buddypress' ) );
 
 		$message = sprintf( __( '%1$s replied to one of your updates:
 
-"%2$s"
+<blockquote>%2$s</blockquote>
 
-To view your original update and all comments, log in and visit: %3$s
+%3$s', 'buddypress' ), $sender_link, $content, $reply_link );
 
----------------------
-', 'buddypress' ), $poster_name, $content, $thread_link );
-
-		$message .= sprintf( __( 'To disable these notifications please log in and go to: %s', 'buddypress' ), $settings_link );
+		$message .= sprintf( ' &middot; <a href="%s">%s</a>', $settings_link, __( 'Notification Settings', 'buddypress' ) );
 
 		return $message;
 	}
