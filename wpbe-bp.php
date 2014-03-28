@@ -117,6 +117,12 @@ class WPBE_BP {
 		// Groups - membership completed
 		add_filter( 'groups_notification_membership_request_completed_message', array( $this, 'use_html_for_membership_request_completed' ), 99, 6 );
 
+		// Groups - member promoted
+		add_filter( 'groups_notification_promoted_member_message', array( $this, 'use_html_for_member_promoted' ), 99, 5 );
+
+		// Groups - member invitation
+		add_filter( 'groups_notification_group_invites_message', array( $this, 'use_html_for_group_invite' ), 99, 7 );
+
 		// Use the HTML content for the following emails
 		// @todo add support for BP Group Email Subscription
 		// WPBE - convert HTML to plaintext body
@@ -541,7 +547,6 @@ Because you are the administrator of this group, you must either accept or rejec
 		}
 
 		$group_link = '<a href="' . $group_url . '</a>' . $group->name . '</a>';
-		$user_link = sprintf( '<a href="%s">%s</a>', $profile_link, $requesting_user_name );
 
 		if ( $accepted ) {
 			$content = sprintf( __(
@@ -564,6 +569,65 @@ To submit another request, visit the group: %2$s
 				sprintf( '<a href="%s">%s</a>', $settings_link, __( 'Notifications Settings', 'buddypress' ) )
 			);
 		}
+
+		return $content;
+	}
+
+	/**
+	 * Build HTML content for member promoted emails.
+	 *
+	 * @param string $retval Originally formatted message.
+	 * @param object $group Group object.
+	 * @param string $promoted_to New group status.
+	 * @param string $group_url URL of the group.
+	 * @param string $settings_link URL of the notification settings page
+	 *        for the current user.
+	 * @return string
+	 */
+	function use_html_for_member_promoted( $retval, $group, $promoted_to, $group_url, $settings_link ) {
+		$group_link = '<a href="' . $group_url . '</a>' . $group->name . '</a>';
+
+		$content = sprintf( __(
+'You have been promoted to %1$s for the group %2$s.
+
+%2$s &middot; %3$s', 'buddypress' ),
+			$promoted_to,
+			$group_link,
+			sprintf( '<a href="%s">%s</a>', $group_url, __( 'Visit', 'buddypress' ) ),
+			sprintf( '<a href="%s">%s</a>', $settings_link, __( 'Notifications Settings', 'buddypress' ) )
+		);
+
+		return $content;
+	}
+
+	/**
+	 * Build HTML content for group invitation emails.
+	 *
+	 * @todo Invite Anyone
+	 *
+	 * @param string $retval Originally formatted message.
+	 * @param object $group Group object.
+	 * @param string $inviter_name Name of the inviting member.
+	 * @param string $inviter_url URL of the inviting member's profile.
+	 * @param string $invites_url URL where user can manage invitations.
+	 * @param string $group_url URL of the group.
+	 * @param string $settings_link URL of the notification settings page
+	 *        for the current user.
+	 * @return string
+	 */
+	function use_html_for_group_invite( $retval, $group, $inviter_name, $inviter_url, $invites_url, $group_url, $settings_link ) {
+		$group_link = '<a href="' . $group_url . '</a>' . $group->name . '</a>';
+
+		$content = sprintf( __(
+'%1$s has invited you to the group %2$s.
+
+%3$s &middot; %4$s &middot; %5$s', 'buddypress' ),
+			sprintf( '<a href="%s">%s</a>', $inviter_url, $inviter_name ),
+			$group_link,
+			sprintf( '<a href="%s">%s</a>', $invites_url, __( 'Accept/Reject', 'buddypress' ) ),
+			sprintf( '<a href="%s">%s</a>', $group_url, __( 'Visit Group', 'buddypress' ) ),
+			sprintf( '<a href="%s">%s</a>', $settings_link, __( 'Notifications Settings', 'buddypress' ) )
+		);
 
 		return $content;
 	}
