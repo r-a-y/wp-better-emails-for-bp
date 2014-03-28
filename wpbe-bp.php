@@ -103,6 +103,9 @@ class WPBE_BP {
 		// Groups - group updated
 		add_filter( 'groups_notification_group_updated_message', array( $this, 'use_html_for_group_updated' ), 99, 4 );
 
+		// Groups - membership request
+		add_filter( 'groups_notification_new_membership_request_message', array( $this, 'use_html_for_membership_request' ), 99, 6 );
+
 		// Use the HTML content for the following emails
 		// @todo add support for BP Group Email Subscription
 		// WPBE - convert HTML to plaintext body
@@ -449,6 +452,41 @@ class WPBE_BP {
 
 		return $content;
 	}
+
+	/**
+	 * Build HTML content for group membership request emails.
+	 *
+	 * @param string $retval Originally formatted message.
+	 * @param object $group Group object.
+	 * @param string $requesting_user_name Name of the user requesting
+	 *        membership.
+	 * @param string $profile_link URL of the requesting user's profile.
+	 * @param string $group_requests URL of the membership requests admin
+	 *        page.
+	 * @param string $settings_link URL of the notification settings page
+	 *        for the current user.
+	 * @return string
+	 */
+	function use_html_for_membership_request( $retval, $group, $requesting_user_name, $profile_link, $group_requests, $settings_link ) {
+		$group_url = bp_get_group_permalink( $group );
+		$group_link = '<a href="' . $group_url . '</a>' . $group->name . '</a>';
+		$user_link = sprintf( '<a href="%s">%s</a>', $profile_link, $requesting_user_name );
+
+		$content = sprintf( __(
+'%1$s wants to join the group %2$s.
+
+Because you are the administrator of this group, you must either accept or reject the membership request.
+
+%3$s &middot; %4$s', 'buddypress' ),
+			$user_link,
+			$group_link,
+			sprintf( '<a href="%s">%s</a>', $group_requests, __( 'View pending memberships for this group', 'buddypress' ) ),
+			sprintf( '<a href="%s">%s</a>', $settings_link, __( 'Notifications Settings', 'buddypress' ) )
+		);
+
+		return $content;
+	}
+
 	/**
 	 * In WP Better Emails, we still need to generate a plain-text body.
 	 *
