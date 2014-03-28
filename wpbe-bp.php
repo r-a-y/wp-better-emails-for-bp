@@ -57,20 +57,44 @@ class WPBE_BP {
 		if ( ! $this->is_newer_version() )
 			return;
 
-		// (hack!) we need to stash the original activity item
-		// normal activity items
-		add_action( 'bp_activity_after_save',                         array( $this, 'save_activity_content' ),    9 );
-		add_action( 'bp_activity_after_save',                         array( $this, 'remove_activity_content' ),  999 );
+		/**
+		 * Data stashing
+		 *
+		 * In many places, we need the original data associated with
+		 * the notification (the activity item, the friendship, etc) in
+		 * order to construct the text of the email notification. Until
+		 * BuddyPress is fixed to pass this content in an intelligent
+		 * way, we use some hacks to hook into the save process so that
+		 * we can (a) fetch and stash the necessary data before the
+		 * notification is constructed, and (b) remove the stashed data
+		 * when we're done
+		 */
 
-		// activity comment notifications are sent at bp_activity_comment_posted
+		// Activity - normal activity items
+		add_action( 'bp_activity_after_save', array( $this, 'save_activity_content' ),    9 );
+		add_action( 'bp_activity_after_save', array( $this, 'remove_activity_content' ),  999 );
+
+		// Activity - comment notifications are sent at bp_activity_comment_posted
 		add_action( 'bp_activity_comment_posted', array( $this, 'save_activity_comment' ),    9 );
 		add_action( 'bp_activity_comment_posted', array( $this, 'remove_activity_comment' ),  999 );
 
-		// Use the HTML content for the following emails
-		// @todo add support for BP Group Email Subscription
+		// Friends - requests
+		add_action( 'friends_friendship_requested', array( $this, 'save_friendship' ), 9 );
+		add_action( 'friends_friendship_requested', array( $this, 'remove_friendship' ), 999 );
+
+		/** Email content filtering **********************************/
+
+		// Activity - at-mentions
 		add_filter( 'bp_activity_at_message_notification_message',    array( $this, 'use_html_for_at_message' ),       99, 5 );
+
+		// Activity - comments
 		add_filter( 'bp_activity_new_comment_notification_message',   array( $this, 'use_html_for_activity_replies' ), 99, 5 );
 
+		// Friends - requests
+		add_filter( 'friends_notification_new_request_message', array( $this, 'use_html_for_friend_request' ), 99, 5 );
+
+		// Use the HTML content for the following emails
+		// @todo add support for BP Group Email Subscription
 		// WPBE - convert HTML to plaintext body
 		add_filter( 'wpbe_plaintext_body',                            array( $this, 'convert_html_to_plaintext' ) );
 
@@ -146,6 +170,8 @@ class WPBE_BP {
 		return $content_type;
 	}
 
+	/** Activity component ***********************************************/
+
 	/**
 	 * Temporarily save the full activity content.
 	 *
@@ -157,7 +183,7 @@ class WPBE_BP {
 	 *
 	 * @param obj $activity The BP activity object
 	 */
-	public static function save_activity_content( $activity ) {
+	public function save_activity_content( $activity ) {
 		global $bp;
 
 		$bp->activity->temp = $activity;
@@ -172,7 +198,7 @@ class WPBE_BP {
 	 *
 	 * @param obj $activity The BP activity object
 	 */
-	public static function remove_activity_content( $activity ) {
+	public function remove_activity_content( $activity ) {
 		global $bp;
 
 		// remove temporary saved activity content
@@ -191,7 +217,7 @@ class WPBE_BP {
 	 */
 	static function save_activity_comment( $comment_id ) {
 		$comment = new BP_Activity_Activity( $comment_id );
-		self::save_activity_content( $comment );
+		$this->save_activity_content( $comment );
 	}
 
 	/**
@@ -203,7 +229,7 @@ class WPBE_BP {
 	 */
 	static function remove_activity_comment( $comment_id ) {
 		$comment = new BP_Activity_Activity( $comment_id );
-		self::remove_activity_content( $comment );
+		$this->remove_activity_content( $comment );
 	}
 
 	/**
@@ -300,6 +326,61 @@ class WPBE_BP {
 		return $message;
 	}
 
+	/** Friends component ************************************************/
+
+	/**
+	 * Stash friendship data for later use.
+	 *
+	 * @param int $friendship_id
+	 */
+	public function save_friendship( $friendship_id ) {
+		$friendship = new BP_Friends_Friendship( $friendship_id );
+		buddypress()->friends->temp = $friendship;
+	}
+
+	/**
+	 * Remove stashed friendship data.
+	 *
+	 * @param int $friendship_id
+	 */
+	public function remove_friendship( $friendship_id ) {
+		unset( buddypress()->friends->temp );
+	}
+
+	/**
+	 * Build HTML content for friend request emails.
+	 *
+	 * @param string $retval Originally formatted message.
+	 * @param string $initiator_name Name of the friendship originator.
+	 * @param string $initiator_link URL of the initiator's profile.
+	 * @param string $all_requests_link URL of the user's requests page.
+	 * @param string $settings_link URL of the user's notification settings page.
+	 * @return string
+	 */
+	function use_html_for_friend_request( $retval, $initiator_name, $initiator_link, $all_requests_link, $settings_link ) {
+		// sanity check!
+		if ( empty( buddypress()->friends->temp ) ) {
+			return $retval;
+
+		// grab our friendship content from our locally-cached variable
+		} else {
+			$friendship = buddypress()->friends->temp;
+		}
+
+		$initiator_link = bp_core_get_userlink( $friendship->initiator_user_id );
+
+		$content = sprintf( __( '
+%1$s wants to add you as a friend.
+
+%2$s &middot; %3$s', 'buddypress' ),
+			$initiator_link,
+			sprintf( '<a href="%s">%s</a>', $all_requests_link, __( 'View/Reply', 'buddypress' ) ),
+			sprintf( '<a href="%s">%s</a>', $settings_link, __( 'Notifications Settings', 'buddypress' ) )
+		);
+
+		return $content;
+	}
+
 	/**
 	 * In WP Better Emails, we still need to generate a plain-text body.
 	 *
@@ -353,6 +434,7 @@ class WPBE_BP {
 
 		// set HTML to false to be extra-safe!
 		$phpmailer->IsHTML( false );
+
 	}
 
 	/**
