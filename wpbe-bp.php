@@ -82,6 +82,10 @@ class WPBE_BP {
 		add_action( 'friends_friendship_requested', array( $this, 'save_friendship' ), 9 );
 		add_action( 'friends_friendship_requested', array( $this, 'remove_friendship' ), 999 );
 
+		// Friends - requests
+		add_action( 'friends_friendship_accepted', array( $this, 'save_friendship' ), 9 );
+		add_action( 'friends_friendship_accepted', array( $this, 'remove_friendship' ), 999 );
+
 		/** Email content filtering **********************************/
 
 		// Activity - at-mentions
@@ -92,6 +96,9 @@ class WPBE_BP {
 
 		// Friends - requests
 		add_filter( 'friends_notification_new_request_message', array( $this, 'use_html_for_friend_request' ), 99, 5 );
+
+		// Friends - accepted
+		add_filter( 'friends_notification_accepted_request_message', array( $this, 'use_html_for_friend_accept' ), 99, 4 );
 
 		// Use the HTML content for the following emails
 		// @todo add support for BP Group Email Subscription
@@ -375,6 +382,38 @@ class WPBE_BP {
 %2$s &middot; %3$s', 'buddypress' ),
 			$initiator_link,
 			sprintf( '<a href="%s">%s</a>', $all_requests_link, __( 'View/Reply', 'buddypress' ) ),
+			sprintf( '<a href="%s">%s</a>', $settings_link, __( 'Notifications Settings', 'buddypress' ) )
+		);
+
+		return $content;
+	}
+
+	/**
+	 * Build HTML content for friend acceptance emails.
+	 *
+	 * @param string $retval Originally formatted message.
+	 * @param string $friend_name Name of the accepting friend.
+	 * @param string $friend_link URL of the accepting friend's profile.
+	 * @param string $settings_link URL of the user's notification settings page.
+	 * @return string
+	 */
+	function use_html_for_friend_accept( $retval, $friend_name, $friend_link, $settings_link ) {
+		// sanity check!
+		if ( empty( buddypress()->friends->temp ) ) {
+			return $retval;
+
+		// grab our friendship content from our locally-cached variable
+		} else {
+			$friendship = buddypress()->friends->temp;
+		}
+
+		$friend_link = bp_core_get_userlink( $friendship->friend_user_id );
+
+		$content = sprintf( __( '
+%1$s accepted your friend request.
+
+%2$s', 'buddypress' ),
+			$friend_link,
 			sprintf( '<a href="%s">%s</a>', $settings_link, __( 'Notifications Settings', 'buddypress' ) )
 		);
 
