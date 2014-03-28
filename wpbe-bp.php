@@ -86,6 +86,14 @@ class WPBE_BP {
 		add_action( 'friends_friendship_accepted', array( $this, 'save_friendship' ), 9 );
 		add_action( 'friends_friendship_accepted', array( $this, 'remove_friendship' ), 999 );
 
+		// Groups - membership request accepted
+		add_action( 'groups_membership_accepted', array( $this, 'save_membership' ), 9, 3 );
+		add_action( 'groups_membership_accepted', array( $this, 'remove_membership' ), 999, 3 );
+
+		// Groups - membership request rejected
+		add_action( 'groups_membership_rejected', array( $this, 'save_membership' ), 9, 3 );
+		add_action( 'groups_membership_rejected', array( $this, 'remove_membership' ), 999, 3 );
+
 		/** Email content filtering **********************************/
 
 		// Activity - at-mentions
@@ -105,6 +113,9 @@ class WPBE_BP {
 
 		// Groups - membership request
 		add_filter( 'groups_notification_new_membership_request_message', array( $this, 'use_html_for_membership_request' ), 99, 6 );
+
+		// Groups - membership completed
+		add_filter( 'groups_notification_membership_request_completed_message', array( $this, 'use_html_for_membership_request_completed' ), 99, 6 );
 
 		// Use the HTML content for the following emails
 		// @todo add support for BP Group Email Subscription
@@ -429,6 +440,28 @@ class WPBE_BP {
 	/** Groups component *************************************************/
 
 	/**
+	 * Stash the accepted/rejected status of a processed membership request.
+	 *
+	 * @param int $requesting_user_id
+	 * @param int $group_id
+	 * @param bool $accepted
+	 */
+	public function save_membership( $requesting_user_id, $group_id, $accepted ) {
+		buddypress()->groups->temp = $accepted;
+	}
+
+	/**
+	 * Removed the stashed accepted/rejected status of a processed membership request.
+	 *
+	 * @param int $requesting_user_id
+	 * @param int $group_id
+	 * @param bool $accepted
+	 */
+	public function remove_membership( $requesting_user_id, $group_id, $accepted ) {
+		unset( buddypress()->groups->temp );
+	}
+
+	/**
 	 * Build HTML content for group updated emails.
 	 *
 	 * @param string $retval Originally formatted message.
@@ -483,6 +516,54 @@ Because you are the administrator of this group, you must either accept or rejec
 			sprintf( '<a href="%s">%s</a>', $group_requests, __( 'View pending memberships for this group', 'buddypress' ) ),
 			sprintf( '<a href="%s">%s</a>', $settings_link, __( 'Notifications Settings', 'buddypress' ) )
 		);
+
+		return $content;
+	}
+
+	/**
+	 * Build HTML content for group membership request completed emails.
+	 *
+	 * @param string $retval Originally formatted message.
+	 * @param object $group Group object.
+	 * @param string $group_url URL of the group.
+	 * @param string $settings_link URL of the notification settings page
+	 *        for the current user.
+	 * @return string
+	 */
+	function use_html_for_membership_request_completed( $retval, $group, $group_url, $settings_link ) {
+		// sanity check!
+		if ( ! isset( buddypress()->groups->temp ) ) {
+			return $retval;
+
+		// grab our friendship content from our locally-cached variable
+		} else {
+			$accepted = buddypress()->groups->temp;
+		}
+
+		$group_link = '<a href="' . $group_url . '</a>' . $group->name . '</a>';
+		$user_link = sprintf( '<a href="%s">%s</a>', $profile_link, $requesting_user_name );
+
+		if ( $accepted ) {
+			$content = sprintf( __(
+'Your membership request for the group %1$s has been accepted.
+
+%2$s &middot; %3$s', 'buddypress' ),
+				$group_link,
+				sprintf( '<a href="%s">%s</a>', $group_url, __( 'Visit', 'buddypress' ) ),
+				sprintf( '<a href="%s">%s</a>', $settings_link, __( 'Notifications Settings', 'buddypress' ) )
+			);
+		} else {
+			$content = sprintf( __(
+'Your membership request for the group %1$s has been rejected.
+
+To submit another request, visit the group: %2$s
+
+%3$s', 'buddypress' ),
+				$group_link,
+				$group_link,
+				sprintf( '<a href="%s">%s</a>', $settings_link, __( 'Notifications Settings', 'buddypress' ) )
+			);
+		}
 
 		return $content;
 	}
