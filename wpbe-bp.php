@@ -6,7 +6,7 @@
  * @subpackage Core
  */
 
- // Exit if accessed directly
+// Exit if accessed directly
 if ( !defined( 'ABSPATH' ) ) exit;
 
 /**
@@ -102,6 +102,10 @@ class WPBE_BP {
 		// Activity - comments
 		add_filter( 'bp_activity_new_comment_notification_message',   array( $this, 'use_html_for_activity_replies' ), 99, 5 );
 
+		// Activity - bbPress 1.x forum posts/replies (BPGES)
+		add_filter( 'bp_ass_new_topic_content', array( $this, 'use_html_for_new_topic' ), 99, 2 );
+		add_filter( 'bp_ass_forum_reply_content', array( $this, 'use_html_for_forum_reply' ), 99, 2 );
+
 		// Friends - requests
 		add_filter( 'friends_notification_new_request_message', array( $this, 'use_html_for_friend_request' ), 99, 5 );
 
@@ -127,6 +131,9 @@ class WPBE_BP {
 		// @todo add support for BP Group Email Subscription
 		// WPBE - convert HTML to plaintext body
 		add_filter( 'wpbe_plaintext_body',                            array( $this, 'convert_html_to_plaintext' ) );
+
+		// A general filter to handle BPGES extra formatting
+		add_filter( 'bp_ass_forum_notification_message', array( $this, 'convert_bpass_message' ), 10, 9 );
 
 		// Filters we run to convert HTML to plain-text
 		add_filter( 'wpbe_html_to_plaintext',                         'stripslashes',               5 );
@@ -354,6 +361,51 @@ class WPBE_BP {
 		$message .= sprintf( ' &middot; <a href="%s">%s</a>', $settings_link, __( 'Notification Settings', 'buddypress' ) );
 
 		return $message;
+	}
+
+	/**
+	 * Modify the new forum topic notification email to use HTML.
+	 *
+	 * Works only for bbPress 1.x legacy forums installed in groups.
+	 * Requires BuddyPress Group Email Subscription.
+	 *
+	 * @param string $retval The original email message.
+	 * @param object $activity Data about the activity item. Note: This
+	 *        is not a real BP activity item, but one faked by BPGES.
+	 * @return str The modified email content containing HTML if available.
+	 */
+	function use_html_for_new_topic( $retval, $activity ) {
+		do_action( 'bbpress_init' );
+
+		$post_id = $activity->secondary_item_id;
+		$post = bb_get_post( $post_id );
+		$topic = get_topic( $post->topic_id );
+		$topic_url = trailingslashit( $group_url . 'forum/topic/' . $topic->topic_slug );
+
+		$group_id = $activity->item_id;
+		$group = groups_get_group( array( 'group_id' => $group_id ) );
+		$group_url = bp_get_group_permalink( $group );
+
+		$content = sprintf( __(
+'%1$s started the forum topic %2$s in the group %3$s:
+
+<blockquote>%4$s</blockquote>
+
+%5$s &middot; %6$s', 'buddypress' ),
+			bp_core_get_userlink( $post->poster_id ),
+			sprintf( '<a href="%s">%s</a>', $topic_url, $topic->title ),
+			sprintf( '<a href="%s">%s</a>', $group_url, $group->name ),
+			$post->post_text,
+			sprintf( '<a href="%s">%s</a>', $topic_url, __( 'View/Reply', 'buddypress' ) ),
+			sprintf( '<a href="%s">%s</a>', $settings_link, __( 'Notification Settings', 'buddypress' ) )
+		);
+
+		// Don't let GES strip goodies
+		remove_filter( 'ass_clean_content', 'strip_tags', 4 );
+		remove_filter( 'ass_clean_content', 'ass_convert_links', 6 );
+		remove_filter( 'ass_clean_content', 'ass_html_entity_decode', 8 );
+
+		return $content;
 	}
 
 	/** Friends component ************************************************/
@@ -627,6 +679,25 @@ To submit another request, visit the group: %2$s
 			sprintf( '<a href="%s">%s</a>', $invites_url, __( 'Accept/Reject', 'buddypress' ) ),
 			sprintf( '<a href="%s">%s</a>', $group_url, __( 'Visit Group', 'buddypress' ) ),
 			sprintf( '<a href="%s">%s</a>', $settings_link, __( 'Notifications Settings', 'buddypress' ) )
+		);
+
+		return $content;
+	}
+
+	/** BuddyPress Group Email Subscription ******************************/
+
+	public function convert_bpass_message( $retval, $message, $notice, $user_id, $group_status, $the_content, $text_before_primary, $primary_link, $settings_link ) {
+		error_log( print_r( func_get_args(), 1 ) );
+		$notice = preg_replace( '|To disable these notifications please log in and go to\: (\S+)$', sprintf( '<a href="%s">%s</a>', $settings_link, __( 'Modify notification settings', 'bp-ass' ) ), $notice );
+
+		$content = sprintf( __( '
+%1$s
+
+%2$s
+
+', 'buddypress' ),
+			$the_content,
+			$notice
 		);
 
 		return $content;
