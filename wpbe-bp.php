@@ -813,7 +813,7 @@ To submit another request, visit the group: %2$s
 			$footer_links[] = $this->get_bpges_group_unsubscribe_link( $data['user_id'] );
 
 			if ( 'yes' == get_option( 'ass-global-unsubscribe-link' ) ) {
-				$footer_links[] = get_bpges_global_unsubscribe_link( $data['user_id'] );
+				$footer_links[] = $this->get_bpges_global_unsubscribe_link( $data['user_id'] );
 			}
 		}
 
@@ -953,7 +953,7 @@ To submit another request, visit the group: %2$s
 				$footer_links[] = $this->get_bpges_group_unsubscribe_link( $data['user_id'] );
 
 				if ( 'yes' == get_option( 'ass-global-unsubscribe-link' ) ) {
-					$footer_links[] = get_bpges_global_unsubscribe_link( $data['user_id'] );
+					$footer_links[] = $this->get_bpges_global_unsubscribe_link( $data['user_id'] );
 				}
 
 				$footer_links = implode( ' &middot; ', $footer_links );
