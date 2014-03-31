@@ -102,10 +102,6 @@ class WPBE_BP {
 		// Activity - comments
 		add_filter( 'bp_activity_new_comment_notification_message',   array( $this, 'use_html_for_activity_replies' ), 99, 5 );
 
-		// Activity - bbPress 1.x forum posts/replies (BPGES)
-		add_filter( 'bp_ass_new_topic_content', array( $this, 'use_html_for_legacy_forum_topic' ), 99, 4 );
-		add_filter( 'bp_ass_forum_reply_content', array( $this, 'use_html_for_legacy_forum_reply' ), 99, 4 );
-
 		// Friends - requests
 		add_filter( 'friends_notification_new_request_message', array( $this, 'use_html_for_friend_request' ), 99, 5 );
 
@@ -132,8 +128,20 @@ class WPBE_BP {
 		// WPBE - convert HTML to plaintext body
 		add_filter( 'wpbe_plaintext_body',                            array( $this, 'convert_html_to_plaintext' ) );
 
-		// A general filter to handle the footer for BPGES legacy forum posts
-		add_filter( 'bp_ass_forum_notification_message', array( $this, 'adjust_legacy_forum_post_footer' ), 10, 2 );
+		/** BPGES ****************************************************/
+
+		// Activity - bbPress 1.x forum posts/replies (BPGES)
+		add_filter( 'bp_ass_new_topic_content',             array( $this, 'use_html_for_legacy_forum_topic' ),   99, 4 );
+		add_filter( 'bp_ass_forum_reply_content',           array( $this, 'use_html_for_legacy_forum_reply' ),   99, 4 );
+		add_filter( 'bp_ass_forum_notification_message',    array( $this, 'adjust_legacy_forum_post_footer' ),   10, 2 );
+
+		// Activity - Group activity
+		add_filter( 'bp_ass_activity_notification_action',  array( $this, 'use_html_for_ges_activity_action' ),  99, 2 );
+		add_filter( 'bp_ass_activity_notification_subject', array( $this, 'clean_ges_activity_subject' ),        99 );
+		add_filter( 'bp_ass_activity_notification_content', array( $this, 'use_html_for_ges_activity_content' ), 99, 4 );
+		add_filter( 'bp_ass_activity_notification_message', array( $this, 'adjust_ges_activity_email_content' ), 10, 2 );
+
+		/** Plain-text conversion ************************************/
 
 		// Filters we run to convert HTML to plain-text
 		add_filter( 'wpbe_html_to_plaintext',                         'stripslashes',               5 );
@@ -361,95 +369,6 @@ class WPBE_BP {
 		$message .= sprintf( ' &middot; <a href="%s">%s</a>', $settings_link, __( 'Notification Settings', 'buddypress' ) );
 
 		return $message;
-	}
-
-	/**
-	 * Modify the new forum topic notification email to use HTML.
-	 *
-	 * Works only for bbPress 1.x legacy forums installed in groups.
-	 * Requires BuddyPress Group Email Subscription.
-	 *
-	 * @param string $retval The original email message.
-	 * @param object $activity Data about the activity item. Note: This
-	 *        is not a real BP activity item, but one faked by BPGES.
-	 * @param object $post The bbPress 1.x topic generated from {@link get_topic()}.
-	 * @param object $group The BP_Groups_Group object.
-	 * @return string The modified email content containing HTML if available.
-	 */
-	function use_html_for_legacy_forum_topic( $retval, $activity, $topic, $group ) {
-		$group_url = bp_get_group_permalink( $group );
-		$topic_url = $activity->primary_link;
-
-		// if group is not public, use login URL to verify authentication and for
-		// easier redirection after logging in
-		if ( $group->status != 'public' ) {
-			$topic_url = ass_get_login_redirect_url( $activity->primary_link );
-		}
-
-		$content = sprintf( __(
-'%1$s started the forum topic %2$s in the group %3$s:
-
-<blockquote>%4$s</blockquote>
-
-%5$s', 'buddypress' ),
-			bp_core_get_userlink( $activity->user_id ),
-			sprintf( '<a href="%s">%s</a>', $topic_url, $topic->title ),
-			sprintf( '<a href="%s">%s</a>', $group_url, $group->name ),
-			$activity->content,
-			sprintf( '<a href="%s">%s</a>', $topic_url, __( 'View/Reply', 'buddypress' ) )
-		);
-
-		// Don't let GES strip goodies
-		remove_filter( 'ass_clean_content', 'strip_tags', 4 );
-		remove_filter( 'ass_clean_content', 'ass_convert_links', 6 );
-		remove_filter( 'ass_clean_content', 'ass_html_entity_decode', 8 );
-
-		return $content;
-	}
-
-	/**
-	 * Modify the new forum reply notification email to use HTML.
-	 *
-	 * Works only for bbPress 1.x legacy forums installed in groups.
-	 * Requires BuddyPress Group Email Subscription.
-	 *
-	 * @param string $retval The original email message.
-	 * @param object $activity Data about the activity item. Note: This
-	 *        is not a real BP activity item, but one faked by BPGES.
-	 * @param object $post The bbPress 1.x topic generated from {@link get_topic()}.
-	 * @param object $group The BP_Groups_Group object.
-	 * @return string The modified email content containing HTML if available.
-	 */
-	function use_html_for_legacy_forum_reply( $retval, $activity, $topic, $group ) {
-		$group_url = bp_get_group_permalink( $group );
-		$topic_url = trailingslashit( $group_url . 'forum/topic/' . $topic->topic_slug );
-		$view_url  = $activity->primary_link;
-
-		// if group is not public, use login URL to verify authentication and for
-		// easier redirection after logging in
-		if ( $group->status != 'public' ) {
-			$view_url = ass_get_login_redirect_url( $activity->primary_link );
-		}
-
-		$content = sprintf( __(
-'%1$s replied to the forum topic %2$s in the group %3$s:
-
-<blockquote>%4$s</blockquote>
-
-%5$s', 'buddypress' ),
-			bp_core_get_userlink( $activity->user_id ),
-			sprintf( '<a href="%s">%s</a>', $topic_url, $topic->title ),
-			sprintf( '<a href="%s">%s</a>', $group_url, $group->name ),
-			$activity->content,
-			sprintf( '<a href="%s">%s</a>', $view_url, __( 'View/Reply', 'buddypress' ) )
-		);
-
-		// Don't let GES strip goodies
-		remove_filter( 'ass_clean_content', 'strip_tags', 4 );
-		remove_filter( 'ass_clean_content', 'ass_convert_links', 6 );
-		remove_filter( 'ass_clean_content', 'ass_html_entity_decode', 8 );
-
-		return $content;
 	}
 
 	/** Friends component ************************************************/
@@ -731,6 +650,95 @@ To submit another request, visit the group: %2$s
 	/** BuddyPress Group Email Subscription ******************************/
 
 	/**
+	 * Modify the new forum topic notification email to use HTML.
+	 *
+	 * Works only for bbPress 1.x legacy forums installed in groups.
+	 * Requires BuddyPress Group Email Subscription.
+	 *
+	 * @param string $retval The original email message.
+	 * @param object $activity Data about the activity item. Note: This
+	 *        is not a real BP activity item, but one faked by BPGES.
+	 * @param object $post The bbPress 1.x topic generated from {@link get_topic()}.
+	 * @param object $group The BP_Groups_Group object.
+	 * @return string The modified email content containing HTML if available.
+	 */
+	function use_html_for_legacy_forum_topic( $retval, $activity, $topic, $group ) {
+		$group_url = bp_get_group_permalink( $group );
+		$topic_url = $activity->primary_link;
+
+		// if group is not public, use login URL to verify authentication and for
+		// easier redirection after logging in
+		if ( $group->status != 'public' ) {
+			$topic_url = ass_get_login_redirect_url( $activity->primary_link );
+		}
+
+		$content = sprintf( __(
+'%1$s started the forum topic %2$s in the group %3$s:
+
+<blockquote>%4$s</blockquote>
+
+%5$s', 'buddypress' ),
+			bp_core_get_userlink( $activity->user_id ),
+			sprintf( '<a href="%s">%s</a>', $topic_url, $topic->title ),
+			sprintf( '<a href="%s">%s</a>', $group_url, $group->name ),
+			$activity->content,
+			sprintf( '<a href="%s">%s</a>', $topic_url, __( 'View/Reply', 'buddypress' ) )
+		);
+
+		// Don't let GES strip goodies
+		remove_filter( 'ass_clean_content', 'strip_tags', 4 );
+		remove_filter( 'ass_clean_content', 'ass_convert_links', 6 );
+		remove_filter( 'ass_clean_content', 'ass_html_entity_decode', 8 );
+
+		return $content;
+	}
+
+	/**
+	 * Modify the new forum reply notification email to use HTML.
+	 *
+	 * Works only for bbPress 1.x legacy forums installed in groups.
+	 * Requires BuddyPress Group Email Subscription.
+	 *
+	 * @param string $retval The original email message.
+	 * @param object $activity Data about the activity item. Note: This
+	 *        is not a real BP activity item, but one faked by BPGES.
+	 * @param object $post The bbPress 1.x topic generated from {@link get_topic()}.
+	 * @param object $group The BP_Groups_Group object.
+	 * @return string The modified email content containing HTML if available.
+	 */
+	function use_html_for_legacy_forum_reply( $retval, $activity, $topic, $group ) {
+		$group_url = bp_get_group_permalink( $group );
+		$topic_url = trailingslashit( $group_url . 'forum/topic/' . $topic->topic_slug );
+		$view_url  = $activity->primary_link;
+
+		// if group is not public, use login URL to verify authentication and for
+		// easier redirection after logging in
+		if ( $group->status != 'public' ) {
+			$view_url = ass_get_login_redirect_url( $activity->primary_link );
+		}
+
+		$content = sprintf( __(
+'%1$s replied to the forum topic %2$s in the group %3$s:
+
+<blockquote>%4$s</blockquote>
+
+%5$s', 'buddypress' ),
+			bp_core_get_userlink( $activity->user_id ),
+			sprintf( '<a href="%s">%s</a>', $topic_url, $topic->title ),
+			sprintf( '<a href="%s">%s</a>', $group_url, $group->name ),
+			$activity->content,
+			sprintf( '<a href="%s">%s</a>', $view_url, __( 'View/Reply', 'buddypress' ) )
+		);
+
+		// Don't let GES strip goodies
+		remove_filter( 'ass_clean_content', 'strip_tags', 4 );
+		remove_filter( 'ass_clean_content', 'ass_convert_links', 6 );
+		remove_filter( 'ass_clean_content', 'ass_html_entity_decode', 8 );
+
+		return $content;
+	}
+
+	/**
 	 * BPGES: Reformat the email footer to use HTML for legacy forum posts.
 	 *
 	 * We basically have to regenerate the footer contents here.
@@ -826,6 +834,152 @@ To submit another request, visit the group: %2$s
 	}
 
 	/**
+	 * BPGES: Use unfiltered activity action for activity sendouts.
+	 *
+	 * Unfiltered action includes HTML.
+	 *
+	 * @param bool $retval
+	 * @return bool
+	 */
+	public function use_html_for_ges_activity_action( $retval, $activity ) {
+		return $activity->action;
+	}
+
+	/**
+	 * BPGES: Clean activity subject.
+	 *
+	 * This needs to be done due to us overriding the action to use HTML in
+	 * {@link WPBE_BP::use_html_for_ges_activity_action()}.
+	 *
+	 * @param string The email subject
+	 * @return string
+	 */
+	public function clean_ges_activity_subject( $retval ) {
+		return ass_clean_subject( $retval );
+	}
+
+	/**
+	 * Modify the new forum topic notification email to use HTML.
+	 *
+	 * Works only for bbPress 1.x legacy forums installed in groups.
+	 * Requires BuddyPress Group Email Subscription.
+	 *
+	 * @param string $retval The original email message.
+	 * @param object $activity Data about the activity item. Note: This
+	 *        is not a real BP activity item, but one faked by BPGES.
+	 * @param string $action The activity action.
+	 * @param BP_Groups_Group $group The group object.
+	 * @return string The modified email content containing HTML if available.
+	 */
+	function use_html_for_ges_activity_content( $retval, $activity, $action, $group ) {
+		$activity_permalink = ( isset( $activity->primary_link ) && $activity->primary_link != bp_core_get_user_domain( $activity->user_id ) ) ? $activity->primary_link : bp_get_group_permalink( $group );
+
+		// if group is not public, use login URL to verify authentication and for
+		// easier redirection after logging in
+		if ( $group->status != 'public' ) {
+			$activity_permalink = ass_get_login_redirect_url( $activity_permalink );
+		}
+
+		// no content, so only print the activity action
+		if ( empty( $retval ) ) {
+			$content = sprintf( __( '%1$s
+
+%2$s', 'buddypress' ),
+				$action,
+				sprintf( '<a href="%s">%s</a>', $activity_permalink, __( 'View/Reply', 'buddypress' ) )
+			);
+
+
+		// print content as well
+		} else {
+			$content = sprintf( __( '%1$s
+
+<blockquote>%2$s</blockquote>
+
+%3$s', 'buddypress' ),
+				$action,
+				$retval,
+				sprintf( '<a href="%s">%s</a>', $activity_permalink, __( 'View/Reply', 'buddypress' ) )
+			);
+		}
+
+		// Don't let GES strip goodies
+		remove_filter( 'ass_clean_content', 'strip_tags', 4 );
+		remove_filter( 'ass_clean_content', 'ass_convert_links', 6 );
+		remove_filter( 'ass_clean_content', 'ass_html_entity_decode', 8 );
+
+		return $content;
+	}
+
+	/**
+	 * BPGES: Reformat the email footer to use HTML for group activity items.
+	 *
+	 * @param string $retval The current email contents
+  	 * @param array $data {
+	 *     Array of data.
+	 *     @type string $message The full email content excluding footer
+	 *     @type string $notice The email footer
+	 *     @type int $user_id The user ID posting the content
+	 *     @type string $subscription_type Email subscription type for the receiver of
+	 *           the email.
+	 *     @type string $content The unmodified post content
+	 *     @type string $settings_link The settings link for the receiver of the email.
+	 * }
+	 * @return string
+	 */
+	public function adjust_ges_activity_email_footer( $retval, $data ) {
+		$content = '';
+		$footer  = '';
+		$footer_links = array();
+
+		switch( $data['subscription_type'] ) {
+			// self-notifications
+			case 'self_notify' :
+				$footer = sprintf( __( 'You are currently receiving notifications for your own posts.  To disable these notifications, <a href="%s">login here</a> and uncheck "Receive notifications of your own posts"', 'wpbe-bp' ), $data['settings_link'] );
+
+				$content = sprintf( __( '%1$s
+<hr />
+%2$s' ),
+					$data['content'],
+					$footer
+				);
+
+				break;
+
+			// 'new topics' or 'all mail'
+			case 'sub':
+			case 'supersub':
+				$footer = sprintf( __( 'Your email setting for this group is: ', 'wpbe-bp' ) . '<strong>' . ass_subscribe_translate( $data['subscription_type'] ) . '</strong>' );
+
+				$footer_links[] = sprintf( '<a href="%1$s">%2$s</a>',
+					$data['settings_link'],
+					__( 'Change Group Email Settings', 'wpbe-bp' )
+				);
+
+				$footer_links[] = $this->get_bpges_group_unsubscribe_link( $data['user_id'] );
+
+				if ( 'yes' == get_option( 'ass-global-unsubscribe-link' ) ) {
+					$footer_links[] = get_bpges_global_unsubscribe_link( $data['user_id'] );
+				}
+
+				$footer_links = implode( ' &middot; ', $footer_links );
+
+				$content = sprintf( __( '%1$s
+<hr />
+%2$s
+%3$s' ),
+					$data['content'],
+					$footer,
+					$footer_links
+				);
+
+				break;
+		}
+
+		return apply_filters( 'wpbe_bp_ass_activity_email_content', $content, $footer, $footer_links, $data );
+	}
+
+	/**
 	 * BPGES: Get the HTML unsubscribe link for a group including anchor text.
 	 *
 	 * We can't use {@link ass_group_unsubscribe_links()} because that includes
@@ -865,6 +1019,8 @@ To submit another request, visit the group: %2$s
 			__( 'Unsubscribe from all groups', 'wpbe-bp' )
 		);
 	}
+
+	/** WPBE-BP ************************************************************/
 
 	/**
 	 * In WP Better Emails, we still need to generate a plain-text body.
