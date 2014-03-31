@@ -857,14 +857,10 @@ To submit another request, visit the group: %2$s
 	}
 
 	/**
-	 * Modify the new forum topic notification email to use HTML.
-	 *
-	 * Works only for bbPress 1.x legacy forums installed in groups.
-	 * Requires BuddyPress Group Email Subscription.
+	 * BPGES: Use HTML for group activity item email blasts.
 	 *
 	 * @param string $retval The original email message.
-	 * @param object $activity Data about the activity item. Note: This
-	 *        is not a real BP activity item, but one faked by BPGES.
+	 * @param BP_Activity_Activity $activity The activity item.
 	 * @param string $action The activity action.
 	 * @param BP_Groups_Group $group The group object.
 	 * @return string The modified email content containing HTML if available.
