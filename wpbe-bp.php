@@ -144,10 +144,10 @@ class WPBE_BP {
 		/** Plain-text conversion ************************************/
 
 		// Filters we run to convert HTML to plain-text
-		add_filter( 'wpbe_html_to_plaintext',                         'stripslashes',               5 );
-		add_filter( 'wpbe_html_to_plaintext',                         'wp_kses_normalize_entities', 5 );
-		add_filter( 'wpbe_html_to_plaintext',                         'wpautop' );
-		add_filter( 'wpbe_html_to_plaintext',                         'wp_specialchars_decode',     99 );
+		add_filter( 'wpbe_html_to_plaintext', 'stripslashes',               5 );
+		add_filter( 'wpbe_html_to_plaintext', 'wp_kses_normalize_entities', 5 );
+		add_filter( 'wpbe_html_to_plaintext', 'wpautop' );
+		add_filter( 'wpbe_html_to_plaintext', 'wp_specialchars_decode',     99 );
 	}
 
 	/**
