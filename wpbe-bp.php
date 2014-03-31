@@ -123,11 +123,6 @@ class WPBE_BP {
 		// Groups - member invitation
 		add_filter( 'groups_notification_group_invites_message', array( $this, 'use_html_for_group_invite' ), 99, 7 );
 
-		// Use the HTML content for the following emails
-		// @todo add support for BP Group Email Subscription
-		// WPBE - convert HTML to plaintext body
-		add_filter( 'wpbe_plaintext_body',                            array( $this, 'convert_html_to_plaintext' ) );
-
 		/** BPGES ****************************************************/
 
 		// Activity - bbPress 1.x forum posts/replies (BPGES)
@@ -142,6 +137,9 @@ class WPBE_BP {
 		add_filter( 'bp_ass_activity_notification_message', array( $this, 'adjust_ges_activity_email_content' ), 10, 2 );
 
 		/** Plain-text conversion ************************************/
+
+		// convert HTML to plaintext body
+		add_filter( 'wpbe_plaintext_body',    array( $this, 'convert_html_to_plaintext' ) );
 
 		// Filters we run to convert HTML to plain-text
 		add_filter( 'wpbe_html_to_plaintext', 'stripslashes',               5 );
