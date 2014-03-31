@@ -134,7 +134,7 @@ class WPBE_BP {
 		add_filter( 'bp_ass_activity_notification_action',  array( $this, 'use_html_for_ges_activity_action' ),  99, 2 );
 		add_filter( 'bp_ass_activity_notification_subject', array( $this, 'clean_ges_activity_subject' ),        99 );
 		add_filter( 'bp_ass_activity_notification_content', array( $this, 'use_html_for_ges_activity_content' ), 99, 4 );
-		add_filter( 'bp_ass_activity_notification_message', array( $this, 'adjust_ges_activity_email_content' ), 10, 2 );
+		add_filter( 'bp_ass_activity_notification_message', array( $this, 'adjust_ges_activity_email_footer' ), 10, 2 );
 
 		/** Plain-text conversion ************************************/
 
