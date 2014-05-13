@@ -258,7 +258,7 @@ class WPBE_BP {
 	 *
 	 * @param obj $comment_id The ID of the activity comment.
 	 */
-	static function save_activity_comment( $comment_id ) {
+	public function save_activity_comment( $comment_id ) {
 		$comment = new BP_Activity_Activity( $comment_id );
 		$this->save_activity_content( $comment );
 	}
@@ -270,7 +270,7 @@ class WPBE_BP {
 	 *
 	 * @param obj $comment_id The ID of the activity comment.
 	 */
-	static function remove_activity_comment( $comment_id ) {
+	public function remove_activity_comment( $comment_id ) {
 		$comment = new BP_Activity_Activity( $comment_id );
 		$this->remove_activity_content( $comment );
 	}
