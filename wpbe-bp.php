@@ -521,7 +521,7 @@ class WPBE_BP {
 	 */
 	function use_html_for_membership_request( $retval, $group, $requesting_user_name, $profile_link, $group_requests, $settings_link ) {
 		$group_url = bp_get_group_permalink( $group );
-		$group_link = '<a href="' . $group_url . '</a>' . $group->name . '</a>';
+		$group_link = '<a href="' . $group_url . '">' . $group->name . '</a>';
 		$user_link = sprintf( '<a href="%s">%s</a>', $profile_link, $requesting_user_name );
 
 		$content = sprintf( __(
@@ -559,7 +559,7 @@ Because you are the administrator of this group, you must either accept or rejec
 			$accepted = buddypress()->groups->temp;
 		}
 
-		$group_link = '<a href="' . $group_url . '</a>' . $group->name . '</a>';
+		$group_link = '<a href="' . $group_url . '">' . $group->name . '</a>';
 
 		if ( $accepted ) {
 			$content = sprintf( __(
@@ -598,7 +598,7 @@ To submit another request, visit the group: %2$s
 	 * @return string
 	 */
 	function use_html_for_member_promoted( $retval, $group, $promoted_to, $group_url, $settings_link ) {
-		$group_link = '<a href="' . $group_url . '</a>' . $group->name . '</a>';
+		$group_link = '<a href="' . $group_url . '">' . $group->name . '</a>';
 
 		$content = sprintf( __(
 'You have been promoted to %1$s for the group %2$s.
@@ -629,7 +629,7 @@ To submit another request, visit the group: %2$s
 	 * @return string
 	 */
 	function use_html_for_group_invite( $retval, $group, $inviter_name, $inviter_url, $invites_url, $group_url, $settings_link ) {
-		$group_link = '<a href="' . $group_url . '</a>' . $group->name . '</a>';
+		$group_link = '<a href="' . $group_url . '">' . $group->name . '</a>';
 
 		$content = sprintf( __(
 '%1$s has invited you to the group %2$s.
