@@ -491,7 +491,7 @@ class WPBE_BP {
 	 */
 	function use_html_for_group_updated( $retval, $group, $group_link, $settings_link ) {
 		$group_url = bp_get_group_permalink( $group );
-		$group_link = '<a href="' . $group_url . '</a>' . $group->name . '</a>';
+		$group_link = '<a href="' . $group_url . '">' . $group->name . '</a>';
 
 		$content = sprintf( __(
 'Group details for the group %1$s were updated.
