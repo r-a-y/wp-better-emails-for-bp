@@ -1036,9 +1036,19 @@ To submit another request, visit the group: %2$s
 	 * @return str The modified email content converted to plain-text.
 	 */
 	function convert_html_to_plaintext( $content ) {
+		if ( empty( $content ) ) {
+			return $content;
+		}
+
 		// @todo perhaps load this library at load time instead of during sendouts?
 		if ( ! function_exists( 'convert_html_to_text' ) ) {
 			require( dirname( __FILE__ ) . '/functions.html2text.php' );
+		}
+
+		// suppress warnings when using DOMDocument
+		// this addresses issues with WPBE-BP failing to parse
+		if ( function_exists( 'libxml_use_internal_errors' ) ) {
+			libxml_use_internal_errors( true );
 		}
 
 		add_filter( 'wpbe_html_to_plaintext', 'convert_html_to_text' );
