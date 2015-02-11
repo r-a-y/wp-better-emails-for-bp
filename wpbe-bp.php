@@ -138,6 +138,9 @@ class WPBE_BP {
 
 		/** Plain-text conversion ************************************/
 
+		// fix password reset link
+		add_filter( 'wpbe_plaintext_body',    array( $this, 'password_reset_fix' ), 0 );
+
 		// convert HTML to plaintext body
 		add_filter( 'wpbe_plaintext_body',    array( $this, 'convert_html_to_plaintext' ) );
 
@@ -1015,6 +1018,35 @@ To submit another request, visit the group: %2$s
 	}
 
 	/** WPBE-BP ************************************************************/
+
+	/**
+	 * Remove brackets around password reset link before converting over to HTML.
+	 *
+	 * The password reset link is wrapped around brackets:
+	 * eg. <http://example.com/wp-login.php?action=rp&key...>
+	 *
+	 * This conflicts with our HTML convertion because our converter thinks this
+	 * is an actual HTML tag when it isn't.
+	 *
+	 * @param  string $retval The body text before HTML conversion
+	 * @return string
+	 */
+	function password_reset_fix( $retval ) {
+		// determine if we are looking at a password reset email
+		$login_pos = strpos( $retval, 'wp-login.php?action=rp&key' );
+		if ( false === $login_pos ) {
+			return $retval;
+		}
+
+		// Remove the opening and closing brackets
+		$lbracket_pos = strrpos( $retval, '<', -( strlen( $retval ) - $login_pos ) );
+		$text = substr_replace( $retval, '', $lbracket_pos, 1 );
+
+		$rbracket_pos = strrpos( $text, '>' );
+		$text = substr_replace( $text, '', $rbracket_pos, 1 );
+
+		return $text;
+	}
 
 	/**
 	 * In WP Better Emails, we still need to generate a plain-text body.
